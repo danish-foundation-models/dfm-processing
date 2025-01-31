@@ -1,0 +1,30 @@
+[project]
+name = "dfm-processing"
+version = "0.1.0"
+description = "Library for data processing within the Danish Foundation Models project."
+readme = "README.md"
+authors = [
+    { name = "Kristian Nørgaard Jensen", email = "kristian.n.jensen@alexandra.dk" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "docling>=2.17.0",
+    "extract-msg>=0.52.0",
+    "joblib>=1.4.2",
+    "loguru>=0.7.3",
+    "pypandoc-binary>=1.15",
+    "textract>=1.5.0",
+    "trafilatura>=2.0.0",
+]
+
+[project.scripts]
+dfm-processing = "dfm_processing:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[project.optional-dependencies]
+dev = ["black==23.9.1", "ruff==0.1.0", "pyright==1.1.331", "pre-commit==3.5.0"]
+test = ["pytest==6.2.5", "pytest-lazy-fixture==0.6.3", "pytest-cov==2.8.1"]
