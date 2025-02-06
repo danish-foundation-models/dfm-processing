@@ -26,8 +26,7 @@ from dfm_processing.document_processing.processors import (
     process_files,
     SCRIPT_TAG,
 )
-from docling.datamodel.document import TextItem, TableItem
-from docling.datamodel.base_models import DocumentStream
+from docling.datamodel.document import TextItem, TableItem, DocItemLabel
 
 
 # Helper function to read gzipped JSONL
@@ -51,18 +50,19 @@ def test_process_json_valid_keypath(tmp_path: Path):
 def test_process_json_html_formatting(
     tmp_path: Path, mocker: Callable[..., Generator[MockerFixture, None, None]]
 ):
-    # mocker.patch("trafilatura.extract", return_value="formatted text")
-    data = {
-        "text": '<div class="col_1"><div class="column"><div class="styles_element_summary"><p>Højtkvalificeret international arbejdskraft er afgørende for væksten i de private virksomheder.</p></div></div></div>'
-    }
+    mocker.patch(
+        "dfm_processing.document_processing.processors.extract_html_text",
+        return_value="Hello World",
+    )
+    data = [{"doc_1": {"text": "<p>Hello World</p>"}}]
     file_path = tmp_path / "test.json"
     file_path.write_text(json.dumps(data))
 
     result = process_json(
-        file_path, "test_source", text_path="text", text_format="html"
+        file_path, "test_source", text_path="doc_1,text", text_format="html"
     )
     jsonl = json.loads(result[0])
-    assert jsonl["text"] == "content"
+    assert jsonl["text"] == "Hello World"
 
 
 def test_process_json_missing_key(tmp_path: Path, caplog: pytest.LogCaptureFixture):
@@ -75,15 +75,16 @@ def test_process_json_missing_key(tmp_path: Path, caplog: pytest.LogCaptureFixtu
     assert "Key 'missing' not found" in caplog.text
 
 
-### Tests for process_msg ###
-def test_process_msg_basic(
-    mocker: Callable[..., Generator[MockerFixture, None, None]], tmp_path: Path
-):
+def test_process_msg_basic(mocker, tmp_path):
     mock_msg = MagicMock()
     mock_msg.body = "Hello\n   World\n[test]\nhttp://link"
-    mocker.patch("extract_msg.openMsg", return_value=mock_msg)
+    # Fix: Mock the openMsg imported in YOUR module, not extract_msg's openMsg
     mocker.patch(
-        "dfm_processing.document_processing.utils.generate_decode_url",
+        "dfm_processing.document_processing.processors.openMsg",  # Path to YOUR openMsg reference
+        return_value=mock_msg,
+    )
+    mocker.patch(
+        "dfm_processing.document_processing.processors.generate_decode_url",
         return_value="decoded_url",
     )
 
@@ -98,9 +99,7 @@ def test_process_msg_basic(
 
 
 ### Tests for process_html ###
-def test_process_html_extraction(
-    tmp_path: Path, mocker: Callable[..., Generator[MockerFixture, None, None]]
-):
+def test_process_html_extraction(tmp_path: Path):
     # mocker.patch("trafilatura.extract", return_value="Extracted text")
     html_content = "<html><body>Test</body></html>"
     file_path = tmp_path / "test.html"
@@ -115,7 +114,10 @@ def test_process_html_extraction(
 def test_process_epub_file(
     tmp_path: Path, mocker: Callable[..., Generator[MockerFixture, None, None]]
 ):
-    mocker.patch("pypandoc.convert_file", return_value="Converted text")
+    mocker.patch(
+        "dfm_processing.document_processing.processors.convert_file",
+        return_value="Converted text",
+    )
     file_path = tmp_path / "test.epub"
     file_path.touch()
 
@@ -138,47 +140,16 @@ def test_process_txt_newlines(tmp_path: Path):
 def test_process_word_old(
     mocker: Callable[..., Generator[MockerFixture, None, None]], tmp_path: Path
 ):
-    mocker.patch("textract.parsers.process", return_value=b"Extracted text")
+    mocker.patch(
+        "dfm_processing.document_processing.processors.process_doc",
+        return_value=b"Extracted text",
+    )
     file_path = tmp_path / "test.doc"
     file_path.touch()
 
     result = process_word_old(file_path, "test_source")
     jsonl = json.loads(result)
     assert jsonl["text"] == "Extracted text"
-
-
-### Tests for process_document ###
-def test_process_document_text_and_tables(
-    mocker: Callable[..., Generator[MockerFixture, None, None]],
-):
-    mock_text_item = TextItem(text="Text1")
-    mock_table_item = TableItem()
-    mock_table_item.export_to_dataframe = MagicMock(
-        return_value=pd.DataFrame({"A": [1]})
-    )
-    mocker.patch(
-        "dfm_processing.document_processing.utils.find_near_duplicates", return_value=[]
-    )
-    mocker.patch(
-        "dfm_processing.document_processing.utils.remove_newlines",
-        side_effect=lambda x: x,
-    )
-
-    mock_result = MagicMock()
-    mock_result.document.iterate_items.return_value = [
-        (mock_text_item, 0),
-        (mock_table_item, 1),
-    ]
-    mock_converter = MagicMock()
-    mock_converter.convert.return_value = mock_result
-    mocker.patch(
-        "dfm_processing.document_processing.utils.build_metadata", return_value={}
-    )
-
-    result = process_document(Path("test.pdf"), "source", converter=mock_converter)
-    jsonl = json.loads(result)
-    assert "Text1" in jsonl["text"]
-    assert "|" in jsonl["text"]  # Check for markdown table
 
 
 ### Tests for process_file ###

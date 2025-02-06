@@ -158,10 +158,10 @@ def process_msg(file_path: Path, source: str, **kwargs: dict[str, Any]) -> str: 
         return url
 
     text = openMsg(file_path).body
-    text = re.sub(r"(\n\s)+", "\n", text)
+    text = re.sub(r"[\n\s]+", "\n", text)
     text = re.sub(r"\[.+?\]", "", text)
     text = text.replace("\r", "")
-    text = re.sub(r"https?://[^>]+", replace_url, text)
+    text = re.sub(r"https?:\/\/[^>]+", replace_url, text)
     metadata = build_metadata(file_path)
     return json.dumps(asdict(create_JSONL(text, source, metadata)), ensure_ascii=False)
 
