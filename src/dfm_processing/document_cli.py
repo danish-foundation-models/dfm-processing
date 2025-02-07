@@ -81,7 +81,7 @@ def process_web_crawl(
     failed = False
     # Run the command and capture the output
     try:
-        result = subprocess.run(command, text=True, capture_output=True, check=True)
+        result = subprocess.run(command, text=True, capture_output=True, check=True)  # type: ignore
         # Filter the third column using Python (equivalent to `awk '{print $3}'`)
         main_folders = {
             line.split()[2].split("/")[2]

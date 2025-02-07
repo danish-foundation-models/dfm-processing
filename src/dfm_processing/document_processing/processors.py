@@ -3,7 +3,6 @@
 import gzip
 import io
 import json
-import os
 import re
 from dataclasses import asdict
 from pathlib import Path
@@ -14,6 +13,7 @@ from docling.datamodel.document import TableItem, TextItem
 from extract_msg import openMsg
 from joblib import Parallel, delayed
 from loguru import logger
+from pandas import Index
 from pypandoc import convert_file, convert_text
 from textract.parsers import process as process_doc
 from tqdm import tqdm
@@ -35,7 +35,9 @@ if TYPE_CHECKING:
 SCRIPT_TAG = "<script></script>"
 
 
-def process_json(file_path: Path, source: str, **kwargs: dict[str, Any]) -> list[str]:
+def process_json(
+    file_path: Path | IO[bytes], source: str, **kwargs
+) -> list[str] | str | None:
     """
     Extracts and processes text from a JSON file based on a given path of keys and formatter.
 
@@ -97,8 +99,8 @@ def process_json(file_path: Path, source: str, **kwargs: dict[str, Any]) -> list
         return text
 
     # Setup
-    key_path = kwargs.get("text_path", "text").split(",")
-    text_format = kwargs.get("text_format", "txt")
+    key_path: list[str] = kwargs.get("text_path", "text").split(",")  # type: ignore
+    text_format: str = kwargs.get("text_format", "txt")
 
     # Choose the appropriate formatter
     formatters = {
@@ -117,7 +119,7 @@ def process_json(file_path: Path, source: str, **kwargs: dict[str, Any]) -> list
 
     # Load and process the JSON file
     try:
-        with file_path.open("r", encoding="utf-8") as f:
+        with file_path.open("r", encoding="utf-8") as f:  # type: ignore
             document = json.load(f)
 
         extracted_texts = extract_text(document, key_path)
@@ -138,7 +140,9 @@ def process_json(file_path: Path, source: str, **kwargs: dict[str, Any]) -> list
         return None
 
 
-def process_msg(file_path: Path, source: str, **kwargs: dict[str, Any]) -> str:  # noqa: ARG001
+def process_msg(
+    file_path: Path | IO[bytes], source: str, **kwargs
+) -> list[str] | str | None:  # noqa: ARG001
     """Read a single MSG file and build a JSONL object. Uses Trafilatura for the extraction.
 
     Args:
@@ -169,8 +173,8 @@ def process_msg(file_path: Path, source: str, **kwargs: dict[str, Any]) -> str: 
 def process_html(
     file_path: Path | IO[bytes],
     source: str,
-    **kwargs: dict[str, Any],  # noqa: ARG001
-) -> str:
+    **kwargs,  # noqa: ARG001
+) -> list[str] | str | None:
     """Read a single HTML file and build a JSONL object. Uses Trafilatura for the extraction.
 
     Args:
@@ -201,8 +205,8 @@ def process_html(
 def process_epub(
     file_path: Path | IO[bytes],
     source: str,
-    **kwargs: dict[str, Any],  # noqa: ARG001
-) -> str:
+    **kwargs,  # noqa: ARG001
+) -> list[str] | str | None:
     """Read a single EPUB file and build a JSONL object. Uses Pypandoc for the extraction.
 
     Args:
@@ -229,8 +233,8 @@ def process_epub(
 def process_txt(
     file_path: Path | IO[bytes],
     source: str,
-    **kwargs: dict[str, Any],  # noqa: ARG001
-) -> str:
+    **kwargs,  # noqa: ARG001
+) -> list[str] | str | None:
     """Read a single TXT file and build a JSONL object
 
     Args:
@@ -254,8 +258,8 @@ def process_txt(
 def process_word_old(
     file_path: Path | IO[bytes],
     source: str,
-    **kwargs: dict[str, Any],  # noqa: ARG001
-) -> str:
+    **kwargs,  # noqa: ARG001
+) -> list[str] | str | None:
     """Process an older version word document, specifically a .doc file.
 
     Args:
@@ -266,18 +270,18 @@ def process_word_old(
     Returns:
         str: JSONL line with the file content
     """
-    text: bytes = process_doc(file_path)
-    text = text.decode("utf-8")
+    file_bytes: bytes = process_doc(file_path)
+    text: str = file_bytes.decode("utf-8")
     text = re.sub(r"(\n\s)+", "\n", text)
     metadata = build_metadata(file_path)
     return json.dumps(asdict(create_JSONL(text, source, metadata)), ensure_ascii=False)
 
 
 def process_document(
-    file: Path | IO[bytes],
+    file_path: Path | IO[bytes],
     source: str,
-    **kwargs: dict[str, Any],
-) -> str | None:
+    **kwargs,
+) -> list[str] | str | None:
     """
     Process a single file, converting it into a JSONL string.
 
@@ -292,9 +296,11 @@ def process_document(
     doc_converter = kwargs.get("converter", build_document_converter())
     try:
         input_ = (
-            file
-            if isinstance(file, Path)
-            else DocumentStream(name=file.name, stream=io.BytesIO(file.read()))
+            file_path
+            if isinstance(file_path, Path)
+            else DocumentStream(
+                name=file_path.name, stream=io.BytesIO(file_path.read())
+            )
         )
         result = doc_converter.convert(input_)
 
@@ -309,11 +315,11 @@ def process_document(
             elif isinstance(item, TableItem):
                 table_df: pd.DataFrame = item.export_to_dataframe()
                 dups = find_near_duplicates(table_df, 0.8)
-                column_counts = {}
+                column_counts: dict[str, int] = {}
                 table_df.columns = [
                     make_unique(col, column_counts) for col in table_df.columns
                 ]
-                columns_to_keep = table_df.columns.copy(deep=True)
+                columns_to_keep: Index[str] = table_df.columns.copy(deep=True)  # type: ignore
                 for pair in dups:
                     if pair[1] in columns_to_keep:
                         columns_to_keep = columns_to_keep.drop(pair[1])
@@ -329,12 +335,12 @@ def process_document(
             ensure_ascii=False,
         )
     except Exception as e:
-        logger.error(f"Failed to process file {file}: {e}")
+        logger.error(f"Failed to process file {file_path}: {e}")
         return None
 
 
 def process_file(
-    file: Path | IO[bytes], source: str, **kwargs: dict
+    file_path: Path | IO[bytes], source: str, **kwargs: dict
 ) -> str | list[str] | None:
     """Generic method for processing a file. Will find the file type and use the right processing method.
 
@@ -346,7 +352,11 @@ def process_file(
     Returns:
         str | None: Returns a JSONL line if the file type is supported, else None.
     """
-    suffix = file.suffix if isinstance(file, Path) else "." + file.name.split(".")[-1]
+    suffix = (
+        file_path.suffix
+        if isinstance(file_path, Path)
+        else "." + file_path.name.split(".")[-1]
+    )
     method = {
         ".pdf": process_document,
         ".html": process_html,
@@ -361,10 +371,10 @@ def process_file(
     }.get(suffix)
 
     if not method:
-        logger.warning(f"Unsupported file type: {suffix} - for file: {file!s}")
+        logger.warning(f"Unsupported file type: {suffix} - for file: {file_path!s}")
         return None
 
-    return method(file, source, **kwargs)
+    return method(file_path, source, **kwargs)
 
 
 def process_files(
@@ -373,7 +383,7 @@ def process_files(
     dsk_client: str,
     output_suffix: str = ".jsonl.gz",
     n_workers: int = 4,
-    **kwargs: dict,
+    **kwargs,
 ):
     save_file = output_path
     if "".join(output_path.suffixes) != ".jsonl.gz":

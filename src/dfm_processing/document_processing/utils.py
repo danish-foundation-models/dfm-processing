@@ -159,55 +159,6 @@ def find_near_duplicates(
     return near_duplicates
 
 
-def find_text_keys(data: dict, prefix: str = ""):
-    """Recursively finds all keys named 'text' in a JSON object and yields their full paths.
-
-    Args:
-      data: The JSON object to search.
-      prefix: The prefix to be added to the path.
-
-    Yields:
-      The full paths to the 'text' keys.
-    """
-
-    if isinstance(data, dict):
-        for key, value in data.items():
-            if key == "text":
-                yield prefix + key
-            else:
-                yield from find_text_keys(value, prefix + key + ".")
-    elif isinstance(data, list):
-        for i, item in enumerate(data):
-            yield from find_text_keys(item, prefix + str(i) + ".")
-
-
-def extract_text_values(data: dict, paths: list[str]) -> list[str]:
-    """Extracts text values from a JSON object using given paths.
-
-    Args:
-      data: The JSON object.
-      paths: A list of paths to the 'text' keys.
-
-    Returns:
-      A list of extracted text values.
-    """
-
-    text_values = []
-    for path in paths:
-        value = data
-        for key in path.split("."):
-            try:
-                k = int(key)
-            except ValueError:
-                k = key
-            value = value[k]
-
-        if value not in text_values and value != "":
-            text_values.append(value)
-
-    return text_values
-
-
 def remove_newlines(df: pd.DataFrame) -> pd.DataFrame:
     """Removes newline characters from all string columns in a DataFrame.
 
