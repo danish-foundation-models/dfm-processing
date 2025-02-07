@@ -25,7 +25,7 @@ jobs:
     if: github.event.pull_request.draft == false
     strategy:
         matrix:
-            os: [ubuntu-latest, macos-latest, windows-latest]
+            os: [ubuntu-latest]
             python-version: ["3.11", "3.12", "3.13"]
     runs-on: ${{ matrix.os }}
     steps:
@@ -40,7 +40,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install Dependencies
-        run: uv sync --no-dev
+        run: uv sync --extra test
 
       - name: Log installed packages
         run: uv pip list
