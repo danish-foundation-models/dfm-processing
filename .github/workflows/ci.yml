@@ -13,11 +13,12 @@ on:
 jobs:
   code-check:
     if: github.event.pull_request.draft == false
-    runs-on: self-hosted-ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        python-version: "3.11"
+        with:
+          python-version: "3.11"
       - uses: pre-commit/action@v3.0.1
 
   pytest:
