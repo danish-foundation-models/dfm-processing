@@ -34,8 +34,8 @@ def test_process_json_valid_keypath(tmp_path: Path):
     file_path.write_text(json.dumps(data))
 
     result = process_json(file_path, "test_source", text_path="text")
-    assert len(result) == 1
-    jsonl = json.loads(result[0])
+    assert len(result) == 1  # type: ignore
+    jsonl = json.loads(result[0])  # type: ignore
     assert jsonl["text"] == "Hello world"
 
 
@@ -51,7 +51,7 @@ def test_process_json_html_formatting(tmp_path: Path, mocker: MockerFixture):
     result = process_json(
         file_path, "test_source", text_path="doc_1,text", text_format="html"
     )
-    jsonl = json.loads(result[0])
+    jsonl = json.loads(result[0])  # type: ignore
     assert jsonl["text"] == "Hello World"
 
 
@@ -61,7 +61,7 @@ def test_process_json_missing_key(tmp_path: Path, caplog: pytest.LogCaptureFixtu
     file_path.write_text(json.dumps(data))
 
     result = process_json(file_path, "test_source", text_path="missing")
-    assert len(result) == 0
+    assert len(result) == 0  # type: ignore
     assert "Key 'missing' not found" in caplog.text
 
 
@@ -82,7 +82,7 @@ def test_process_msg_basic(tmp_path: Path, mocker: MockerFixture):
     file_path.touch()
 
     result = process_msg(file_path, "test_source")
-    jsonl = json.loads(result)
+    jsonl = json.loads(result)  # type: ignore
     assert "Hello\nWorld" in jsonl["text"]
     assert "[test]" not in jsonl["text"]
     assert "decoded_url" in jsonl["text"]
@@ -96,7 +96,7 @@ def test_process_html_extraction(tmp_path: Path):
     file_path.write_text(html_content)
 
     result = process_html(file_path, "test_source")
-    jsonl = json.loads(result)
+    jsonl = json.loads(result)  # type: ignore
     assert jsonl["text"] == "Test"
 
 
@@ -110,7 +110,7 @@ def test_process_epub_file(tmp_path: Path, mocker: MockerFixture):
     file_path.touch()
 
     result = process_epub(file_path, "test_source")
-    jsonl = json.loads(result)
+    jsonl = json.loads(result)  # type: ignore
     assert jsonl["text"] == "Converted text"
 
 
@@ -120,7 +120,7 @@ def test_process_txt_newlines(tmp_path: Path):
     file_path.write_text("Line1\n   \nLine2")
 
     result = process_txt(file_path, "test_source")
-    jsonl = json.loads(result)
+    jsonl = json.loads(result)  # type: ignore
     assert jsonl["text"] == "Line1\nLine2"
 
 
@@ -134,7 +134,7 @@ def test_process_word_old(tmp_path: Path, mocker: MockerFixture):
     file_path.touch()
 
     result = process_word_old(file_path, "test_source")
-    jsonl = json.loads(result)
+    jsonl = json.loads(result)  # type: ignore
     assert jsonl["text"] == "Extracted text"
 
 
@@ -146,7 +146,7 @@ def test_process_file_dispatch(mocker: MockerFixture):
     )
     file = Path("test.pdf")
     result = process_file(file, "source")
-    assert json.loads(result)["text"] == "doc"
+    assert json.loads(result)["text"] == "doc"  # type: ignore
 
 
 def test_process_file_unsupported(caplog: pytest.LogCaptureFixture):

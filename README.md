@@ -1,6 +1,6 @@
 # DFM Processing
 
-This repo contains code for processing data within the Danish Foundation Models project. 
+This repo contains code for processing data within the Danish Foundation Models project.
 
 ## CLI
 
