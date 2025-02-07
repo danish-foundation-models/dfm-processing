@@ -1,17 +1,12 @@
 """Unit tests for the document processors."""
 
-from typing import Callable, Generator
 import pytest
 import json
 from pathlib import Path
 from unittest.mock import MagicMock
 import gzip
-from io import BytesIO
-import pandas as pd
-import re
 
 from pytest_mock import MockerFixture
-from pytest_mock.plugin import _mocker
 
 # Import the processing functions
 from dfm_processing.document_processing.processors import (
@@ -21,12 +16,9 @@ from dfm_processing.document_processing.processors import (
     process_epub,
     process_txt,
     process_word_old,
-    process_document,
     process_file,
     process_files,
-    SCRIPT_TAG,
 )
-from docling.datamodel.document import TextItem, TableItem, DocItemLabel
 
 
 # Helper function to read gzipped JSONL
@@ -47,9 +39,7 @@ def test_process_json_valid_keypath(tmp_path: Path):
     assert jsonl["text"] == "Hello world"
 
 
-def test_process_json_html_formatting(
-    tmp_path: Path, mocker: Callable[..., Generator[MockerFixture, None, None]]
-):
+def test_process_json_html_formatting(tmp_path: Path, mocker: MockerFixture):
     mocker.patch(
         "dfm_processing.document_processing.processors.extract_html_text",
         return_value="Hello World",
@@ -75,7 +65,7 @@ def test_process_json_missing_key(tmp_path: Path, caplog: pytest.LogCaptureFixtu
     assert "Key 'missing' not found" in caplog.text
 
 
-def test_process_msg_basic(mocker, tmp_path):
+def test_process_msg_basic(tmp_path: Path, mocker: MockerFixture):
     mock_msg = MagicMock()
     mock_msg.body = "Hello\n   World\n[test]\nhttp://link"
     # Fix: Mock the openMsg imported in YOUR module, not extract_msg's openMsg
@@ -111,9 +101,7 @@ def test_process_html_extraction(tmp_path: Path):
 
 
 ### Tests for process_epub ###
-def test_process_epub_file(
-    tmp_path: Path, mocker: Callable[..., Generator[MockerFixture, None, None]]
-):
+def test_process_epub_file(tmp_path: Path, mocker: MockerFixture):
     mocker.patch(
         "dfm_processing.document_processing.processors.convert_file",
         return_value="Converted text",
@@ -137,9 +125,7 @@ def test_process_txt_newlines(tmp_path: Path):
 
 
 ### Tests for process_word_old ###
-def test_process_word_old(
-    mocker: Callable[..., Generator[MockerFixture, None, None]], tmp_path: Path
-):
+def test_process_word_old(tmp_path: Path, mocker: MockerFixture):
     mocker.patch(
         "dfm_processing.document_processing.processors.process_doc",
         return_value=b"Extracted text",
@@ -153,9 +139,7 @@ def test_process_word_old(
 
 
 ### Tests for process_file ###
-def test_process_file_dispatch(
-    mocker: Callable[..., Generator[MockerFixture, None, None]],
-):
+def test_process_file_dispatch(mocker: MockerFixture):
     mocker.patch(
         "dfm_processing.document_processing.processors.process_document",
         return_value='{"text": "doc"}',
@@ -173,9 +157,7 @@ def test_process_file_unsupported(caplog: pytest.LogCaptureFixture):
 
 
 ### Tests for process_files ###
-def test_process_files_integration(
-    tmp_path: Path, mocker: Callable[..., Generator[MockerFixture, None, None]]
-):
+def test_process_files_integration(tmp_path: Path, mocker: MockerFixture):
     mocker.patch(
         "dfm_processing.document_processing.processors.process_file",
         side_effect=lambda f, s, **kw: json.dumps({"text": f.name}),
