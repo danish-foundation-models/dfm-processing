@@ -25,14 +25,29 @@ class Dataset(BaseModel):
     output_dir: str = Field(help="Path to the directory to store the processed data")
     exclusion_dir: str = Field(help="Path to the directory to store excluded data")
     logging_dir: str = Field(help="Path to the directory to save logs to")
+    debug: bool = Field(False, help="Print debug messages from the datasets")
 
 
 class ExecutorConfig(BaseModel):
     """Executor config object, holding various properties of an executor."""
 
-    type: Literal["local", "dask"] = Field()
     n_workers: int = Field(1, help="Number of workers to process the data in parallel")
     n_tasks: int = Field(1, help="Number of tasks to divide the data into")
+    debug: bool = Field(False, help="Print debug message for the executor")
+
+
+class ClusterConfig(BaseModel):
+    """Dask Cluster configurations."""
+
+    type: Literal["local", "distributed"] | None = Field(
+        "local", help="Whether to run the cluster locally or in a distributed setting."
+    )  # distributed
+    scheduler_host: str | None = Field("localhost", help="")
+    scheduler_port: int | None = Field(8786, help="")
+    scheduler_file: str | None = Field(
+        None, help="Path to a scheduler file to connect to cluster"
+    )
+    n_workers: int = Field(5, help="")
 
 
 class PipelineConfig(BaseModel):
@@ -46,3 +61,5 @@ class PipelineConfig(BaseModel):
 
     sent_dedup: bool = Field(False, help="Whether or not to run sentence deduplication")
     dedup_dir: str = Field(help="Directory to save dedup signatures, etc.")
+
+    cluster: ClusterConfig = Field(help="Configurations for the dask cluster")

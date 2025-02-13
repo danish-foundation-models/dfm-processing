@@ -6,6 +6,8 @@ from datatrove.executor.local import LocalPipelineExecutor
 from datatrove.pipeline.base import PipelineStep
 import typer
 
+from dfm_processing.data_pipeline.utils import print_pipeline
+
 
 from .data_pipeline.pipeline import filter_pipeline, build_executor, sent_dedup
 from .data_pipeline.config import PipelineConfig, load_yml_config
@@ -78,4 +80,5 @@ def run(
 
         executors.append(executor)
 
-    print([executor.pipeline for executor in executors])
+    for executor in executors:
+        print_pipeline(executor)

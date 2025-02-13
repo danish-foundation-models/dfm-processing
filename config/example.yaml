@@ -22,6 +22,14 @@ dedup_dir: dedup/
 
 # Executor
 executor:
-  type: local
   n_workers: 5
   n_tasks: 10
+  debug: True
+
+
+cluster:
+  type: local # distributed
+  scheduler_host: localhost
+  scheduler_port: 8786
+  scheduler_file:
+  n_workers: 5
