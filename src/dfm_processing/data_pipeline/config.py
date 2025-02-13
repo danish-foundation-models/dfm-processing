@@ -18,6 +18,8 @@ def load_yml_config(path: Path):
 
 
 class Dataset(BaseModel):
+    """Dataset config object containing various info about a specific dataset."""
+
     name: str = Field(help="Name of the dataset to be processed")
     input_dir: str = Field(help="Path to the directory keeping the raw data")
     output_dir: str = Field(help="Path to the directory to store the processed data")
@@ -26,6 +28,8 @@ class Dataset(BaseModel):
 
 
 class ExecutorConfig(BaseModel):
+    """Executor config object, holding various properties of an executor."""
+
     type: Literal["local", "dask"] = Field()
     n_workers: int = Field(1, help="Number of workers to process the data in parallel")
     n_tasks: int = Field(1, help="Number of tasks to divide the data into")
