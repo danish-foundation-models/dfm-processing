@@ -8,13 +8,14 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
+    "datatrove[io,processing]>=0.3.0",
     "docling>=2.17.0",
     "extract-msg>=0.52.0",
     "joblib>=1.4.2",
     "loguru>=0.7.3",
     "pypandoc-binary>=1.15",
     "textract>=1.5.0",
-    "trafilatura>=2.0.0",
+    "trafilatura>=1.8.0",
 ]
 
 [project.scripts]
