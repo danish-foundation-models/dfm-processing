@@ -1,0 +1,27 @@
+# Example config file
+
+# Directories
+datasets:
+  -
+    name: data1
+    input_dir: data1/
+    output_dir: output/data1/
+    exclusion_dir: exclusions/data1/
+    logging_dir: logs/data1/
+  -
+    name: data2
+    input_dir: data2/
+    output_dir: output/data2/
+    exclusion_dir: exclusions/data2/
+    logging_dir: logs/data2/
+
+# Deduplication
+sent_dedup: True
+dedup_dir: dedup/
+
+
+# Executor
+executor:
+  type: local
+  n_workers: 5
+  n_tasks: 10
