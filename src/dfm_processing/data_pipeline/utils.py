@@ -1,6 +1,7 @@
 """Module containing various utils/nice-to-have methods for the data pipeline."""
 
 from datatrove.executor.local import LocalPipelineExecutor
+from datatrove.utils.logging import log_pipeline
 
 
 def print_pipeline(executor: LocalPipelineExecutor):
@@ -12,4 +13,4 @@ def print_pipeline(executor: LocalPipelineExecutor):
     if executor.depends:
         print_pipeline(executor.depends)
 
-    print(executor.pipeline)
+    log_pipeline(executor.pipeline)

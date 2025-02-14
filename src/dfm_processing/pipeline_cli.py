@@ -4,13 +4,16 @@ from pathlib import Path
 
 from datatrove.executor.local import LocalPipelineExecutor
 from datatrove.pipeline.base import PipelineStep
+from datatrove.utils.stats import PipelineStats
+from datatrove.utils.logging import logger
+from distributed import Client, Future
 import typer
-
-from dfm_processing.data_pipeline.utils import print_pipeline
 
 
 from .data_pipeline.pipeline import filter_pipeline, build_executor, sent_dedup
-from .data_pipeline.config import PipelineConfig, load_yml_config
+from .data_pipeline.cluster import create_client, submit_job
+from .data_pipeline.config import PipelineConfig, load_yml_config, ClusterConfig
+from .data_pipeline.utils import print_pipeline
 
 
 app = typer.Typer()
@@ -57,14 +60,16 @@ def run(
             )
 
         executor: LocalPipelineExecutor = build_executor(
-            steps + dedup_sigs, logging_dir=dataset.logging_dir, config=executor_config
+            steps + dedup_sigs,
+            logging_dir=f"{dataset.logging_dir}/filter",
+            config=executor_config,
         )
 
         if config.sent_dedup:
             # Step 2
             executor = build_executor(
                 find_dedups,
-                logging_dir=dataset.logging_dir,
+                logging_dir=f"{dataset.logging_dir}/find_dedups",
                 config=executor_config,
                 depends=executor,
             )
@@ -73,12 +78,28 @@ def run(
             # Step 3
             executor = build_executor(
                 filter_dedup,
-                logging_dir=dataset.logging_dir,
+                logging_dir=f"{dataset.logging_dir}/filter_dedups",
                 config=executor_config,
                 depends=executor,
             )
 
         executors.append(executor)
 
+    if executor_config.debug:
+        for executor in executors:
+            print_pipeline(executor)
+
+    cluster_config: ClusterConfig = config.cluster
+    client: Client = create_client(cluster_config)
+    futures: list[Future] = []
     for executor in executors:
-        print_pipeline(executor)
+        futures.append(submit_job(client, executor.run))
+
+    stats: list[PipelineStats] = client.gather(futures)
+    # merged stats
+    stats = list(filter(lambda x: x, stats))
+    if len(stats) > 0:
+        stat: PipelineStats = sum(stats, start=PipelineStats())
+        logger.success(stat.get_repr("All tasks"))
+    else:
+        logger.success("Nothing to do.")

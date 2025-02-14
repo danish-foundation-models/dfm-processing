@@ -33,8 +33,15 @@ def filter_pipeline(
     reader = JsonlReader(input_data)
     filter_steps = [
         LanguageFilter(
-            languages=Languages.danish,
+            languages=[
+                Languages.danish,
+                # Languages.swedish,
+                # Languages.norwegian,
+                # Languages.norwegian_nynorsk,
+                # Languages.english,
+            ],
             exclusion_writer=ParquetWriter(f"{exclusion_dir}/non_danish_documents"),
+            label_only=False,
         ),
         GopherRepetitionFilter(
             language=Languages.danish,

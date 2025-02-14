@@ -11,3 +11,15 @@ wheels/
 
 # Vscode files
 .vscode/*
+
+# Data files
+*.jsonl.gz
+*.parquet
+data/*
+
+# Config files
+*.yaml
+!config/example.yaml
+
+# Log files
+logs/*

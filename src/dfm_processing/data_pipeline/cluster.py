@@ -2,6 +2,7 @@
 
 from typing import Callable
 from dask.distributed import Client
+from distributed import Future
 
 
 from dfm_processing.data_pipeline.config import ClusterConfig
@@ -12,5 +13,6 @@ def create_client(config: ClusterConfig) -> Client:
     return client
 
 
-def submit_job(client: Client, job: Callable):
-    pass
+def submit_job(client: Client, job: Callable, *args):
+    future: Future = client.submit(job, *args)
+    return future
