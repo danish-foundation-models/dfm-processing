@@ -9,6 +9,8 @@ from datatrove.utils.logging import logger
 from distributed import Client, Future
 import typer
 
+from dfm_processing.data_pipeline.config import ExecutorConfig
+
 
 from .data_pipeline.pipeline import filter_pipeline, build_executor, sent_dedup
 from .data_pipeline.cluster import create_client, submit_job
@@ -32,7 +34,7 @@ def run(
         config_file: Path to a config file.
     """
     config = PipelineConfig(**load_yml_config(config_file))
-    executor_config = config.executor
+    executor_config: ExecutorConfig = config.executor
 
     if not isinstance(config.datasets, list):
         typer.Exit(code=1)
