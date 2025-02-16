@@ -39,7 +39,7 @@ class ExecutorConfig(BaseModel):
 class ClusterConfig(BaseModel):
     """Dask Cluster configurations."""
 
-    type: Literal["local", "distributed"] | None = Field(
+    type: Literal["local", "distributed"] = Field(
         "local", help="Whether to run the cluster locally or in a distributed setting."
     )  # distributed
     scheduler_host: str | None = Field("localhost", help="")
