@@ -30,15 +30,18 @@ def filter_pipeline(
     Returns:
         A list of pipeline steps to use in a datatrove pipeline
     """
+    if any([path == "" for path in [input_data, exclusion_dir, output_dir]]):
+        raise ValueError("All input paths must have a value")
+
     reader = JsonlReader(input_data)
     filter_steps = [
         LanguageFilter(
             languages=[
                 Languages.danish,
-                # Languages.swedish,
-                # Languages.norwegian,
-                # Languages.norwegian_nynorsk,
-                # Languages.english,
+                Languages.swedish,
+                Languages.norwegian,
+                Languages.norwegian_nynorsk,
+                Languages.english,
             ],
             exclusion_writer=ParquetWriter(f"{exclusion_dir}/non_danish_documents"),
             label_only=False,
