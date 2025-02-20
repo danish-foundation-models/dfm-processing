@@ -43,11 +43,7 @@ def run(
 
     for dataset in config.datasets:
         name = dataset.name
-        steps: list[PipelineStep] = filter_pipeline(
-            input_data=dataset.input_dir,
-            output_dir=dataset.output_dir,
-            exclusion_dir=dataset.exclusion_dir,
-        )
+        steps: list[PipelineStep] = filter_pipeline(dataset=dataset)
 
         dedup_sigs: list[PipelineStep] = []
         find_dedups: list[PipelineStep] = []

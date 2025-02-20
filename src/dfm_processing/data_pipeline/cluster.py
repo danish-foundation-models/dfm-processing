@@ -9,7 +9,14 @@ from dfm_processing.data_pipeline.config import ClusterConfig
 
 
 def create_client(config: ClusterConfig) -> Client:
-    client = Client(n_workers=config.n_workers, scheduler_file=config.scheduler_file)
+    if config.type == "local" and config.n_workers:
+        client = Client(n_workers=config.n_workers)
+    elif config.type == "distributed" and config.scheduler_file:
+        client = Client(scheduler_file=config.scheduler_file)
+    elif config.type == "distributed" and not config.scheduler_file:
+        client = Client(address=f"{config.scheduler_host}:{config.scheduler_port}")
+    else:
+        raise ValueError(f"Something in your configuration is wrong: {config}")
     return client
 
 

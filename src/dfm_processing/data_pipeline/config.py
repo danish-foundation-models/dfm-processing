@@ -22,6 +22,9 @@ class Dataset(BaseModel):
 
     name: str = Field(help="Name of the dataset to be processed")
     input_dir: str = Field(help="Path to the directory keeping the raw data")
+    glob_pattern: str | None = Field(
+        None, help="Glob pattern to use to select a subset of files in `input_dir`"
+    )
     output_dir: str = Field(help="Path to the directory to store the processed data")
     exclusion_dir: str = Field(help="Path to the directory to store excluded data")
     logging_dir: str = Field(help="Path to the directory to save logs to")

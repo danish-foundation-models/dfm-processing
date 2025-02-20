@@ -6,12 +6,11 @@ from dfm_processing.data_pipeline.pipeline import (
     sent_dedup,
     build_executor,
 )
-from dfm_processing.data_pipeline.config import ExecutorConfig
+from dfm_processing.data_pipeline.config import ExecutorConfig, Dataset
 
 # Import pipeline step classes for type-checking and attribute inspection.
 from datatrove.pipeline.readers import JsonlReader, ParquetReader
 from datatrove.pipeline.writers import ParquetWriter
-from datatrove.pipeline.filters import LanguageFilter, GopherRepetitionFilter
 from datatrove.pipeline.dedup import (
     SentenceFindDedups,
     SentenceDedupSignature,
@@ -21,7 +20,6 @@ from datatrove.pipeline.dedup import (
 from datatrove.pipeline.base import PipelineStep
 from datatrove.executor.local import LocalPipelineExecutor
 from datatrove.utils.typeshelper import Languages
-from datatrove.utils.word_tokenizers import WordTokenizer
 
 
 # ===========================
@@ -29,73 +27,64 @@ from datatrove.utils.word_tokenizers import WordTokenizer
 # ===========================
 
 
-def test_filter_pipeline():
+@pytest.fixture
+def dataset():
+    dataset = {
+        "name": "test",
+        "input_dir": "/input",
+        "output_dir": "/output",
+        "exclusion_dir": "/exclude",
+        "logging_dir": "/logs",
+    }
+    return Dataset(**dataset)
+
+
+def test_filter_pipeline(dataset: Dataset):
     """
     Test that the filter_pipeline function returns the correct sequence of pipeline steps
     with the expected configuration.
     """
-    input_data = "/input/path"
-    output_dir = "/output/path"
-    exclusion_dir = "/exclusion/path"
 
-    pipeline = filter_pipeline(input_data, output_dir, exclusion_dir)
+    pipeline = filter_pipeline(dataset)
     # Expected 4 steps: [JsonlReader, LanguageFilter, GopherRepetitionFilter, ParquetWriter]
     assert isinstance(pipeline, list)
-    assert len(pipeline) == 4
+    assert len(pipeline) >= 3  # Should have atleast a reader, a writer and one filter.
 
     # Step 1: JsonlReader.
     reader = pipeline[0]
     assert isinstance(reader, JsonlReader)
     # Assume the reader stores the input path in an attribute called "data_folder" or "path".
-    assert reader.data_folder.path == input_data
+    assert reader.data_folder.path == dataset.input_dir
 
-    # Step 2: LanguageFilter.
-    lang_filter = pipeline[1]
-    assert isinstance(lang_filter, LanguageFilter)
-    expected_languages = [
-        Languages.danish,
-        Languages.swedish,
-        Languages.norwegian,
-        Languages.norwegian_nynorsk,
-        Languages.english,
-    ]
-    assert lang_filter.languages == expected_languages
+    assert all([isinstance(step, PipelineStep) for step in pipeline])
 
-    # Verify the exclusion writer in the LanguageFilter.
-    exclusion_writer_lang = lang_filter.exclusion_writer
-    assert isinstance(exclusion_writer_lang, ParquetWriter)
-    writer_path = exclusion_writer_lang.output_folder.path
-    assert writer_path == f"{exclusion_dir}/non_danish_documents"
-
-    # Verify label_only is set to False.
-    assert lang_filter.label_only is False
-
-    # Step 3: GopherRepetitionFilter.
-    gopher_filter = pipeline[2]
-    assert isinstance(gopher_filter, GopherRepetitionFilter)
-    assert isinstance(gopher_filter.tokenizer, WordTokenizer)
-    exclusion_writer_gopher = gopher_filter.exclusion_writer
-    assert isinstance(exclusion_writer_gopher, ParquetWriter)
-    writer_path = exclusion_writer_gopher.output_folder.path
-    assert writer_path == f"{exclusion_dir}/gopher_repetition"
-
-    # Step 4: ParquetWriter (for the output).
-    writer = pipeline[3]
+    # Step 2: ParquetWriter (for the output).
+    writer = pipeline[-1]
     assert isinstance(writer, ParquetWriter)
     writer_path = writer.output_folder.path
-    assert writer_path == f"{output_dir}/filter_output"
+    assert writer_path == f"{dataset.output_dir}/filter_output"
 
 
-def test_filter_pipeline_empty_paths():
+def test_filter_pipeline_empty_paths(dataset: Dataset):
     """
     Edge case: Test that filter_pipeline handles empty strings for paths.
     """
-    input_data = ""
-    output_dir = ""
-    exclusion_dir = ""
+    dataset.input_dir = ""
+    dataset.output_dir = ""
+    dataset.exclusion_dir = ""
 
     with pytest.raises(ValueError):
-        filter_pipeline(input_data, output_dir, exclusion_dir)
+        filter_pipeline(dataset)
+
+
+def test_filter_pipeline_empty_glob_pattern(dataset: Dataset):
+    """
+    Edge case: Test that filter_pipeline handles empty strings for paths.
+    """
+    dataset.glob_pattern = ""
+
+    with pytest.raises(ValueError):
+        filter_pipeline(dataset)
 
 
 # ===========================

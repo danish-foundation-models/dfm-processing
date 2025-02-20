@@ -1,7 +1,13 @@
 """Module containing methods for the data pipeline."""
 
 from datatrove.pipeline.base import PipelineStep
-from datatrove.pipeline.filters import LanguageFilter, GopherRepetitionFilter
+from datatrove.pipeline.filters import (
+    LanguageFilter,
+    GopherRepetitionFilter,
+    C4QualityFilter,
+    FineWebQualityFilter,
+    GopherQualityFilter,
+)
 from datatrove.pipeline.dedup import (
     SentenceFindDedups,
     SentenceDedupSignature,
@@ -14,12 +20,10 @@ from datatrove.utils.typeshelper import Languages
 
 from datatrove.executor.local import LocalPipelineExecutor
 
-from dfm_processing.data_pipeline.config import ExecutorConfig
+from dfm_processing.data_pipeline.config import ExecutorConfig, Dataset
 
 
-def filter_pipeline(
-    input_data: str, output_dir: str, exclusion_dir: str
-) -> list[PipelineStep]:
+def filter_pipeline(dataset: Dataset) -> list[PipelineStep]:
     """Method for building up a set of filtering steps for a datatrove pipeline.
 
     Args:
@@ -30,28 +34,51 @@ def filter_pipeline(
     Returns:
         A list of pipeline steps to use in a datatrove pipeline
     """
-    if any([path == "" for path in [input_data, exclusion_dir, output_dir]]):
+    if any(
+        [
+            path == ""
+            for path in [dataset.input_dir, dataset.exclusion_dir, dataset.output_dir]
+        ]
+    ):
         raise ValueError("All input paths must have a value")
 
-    reader = JsonlReader(input_data)
+    if dataset.glob_pattern == "":
+        raise ValueError("Glob pattern cannot be empty.")
+
+    reader = JsonlReader(
+        data_folder=dataset.input_dir, glob_pattern=dataset.glob_pattern
+    )
     filter_steps = [
         LanguageFilter(
             languages=[
                 Languages.danish,
-                Languages.swedish,
-                Languages.norwegian,
-                Languages.norwegian_nynorsk,
-                Languages.english,
+                # Languages.swedish,
+                # Languages.norwegian,
+                # Languages.norwegian_nynorsk,
+                # Languages.english,
             ],
-            exclusion_writer=ParquetWriter(f"{exclusion_dir}/non_danish_documents"),
+            exclusion_writer=ParquetWriter(
+                f"{dataset.exclusion_dir}/non_danish_documents"
+            ),
             label_only=False,
         ),
         GopherRepetitionFilter(
             language=Languages.danish,
-            exclusion_writer=ParquetWriter(f"{exclusion_dir}/gopher_repetition"),
+            exclusion_writer=ParquetWriter(
+                f"{dataset.exclusion_dir}/gopher_repetition"
+            ),
+        ),
+        GopherQualityFilter(
+            exclusion_writer=ParquetWriter(f"{dataset.exclusion_dir}/gopher_quality")
+        ),
+        C4QualityFilter(
+            exclusion_writer=ParquetWriter(f"{dataset.exclusion_dir}/c4_quality")
+        ),
+        FineWebQualityFilter(
+            exclusion_writer=ParquetWriter(f"{dataset.exclusion_dir}/fineweb_quality")
         ),
     ]
-    writer = ParquetWriter(f"{output_dir}/filter_output")
+    writer = ParquetWriter(f"{dataset.output_dir}/filter_output")
 
     return [reader] + filter_steps + [writer]
 
@@ -109,6 +136,10 @@ def sent_dedup(
     ]
 
     return dedup_sigs, find_dedups, filter_dedup
+
+
+def tokenization_pipeline():
+    pass
 
 
 def build_executor(
