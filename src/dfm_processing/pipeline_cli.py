@@ -8,15 +8,19 @@ from datatrove.utils.stats import PipelineStats
 from datatrove.utils.logging import logger
 from distributed import Client, Future
 import typer
-
-from dfm_processing.data_pipeline.config import ExecutorConfig
-
+import nltk
 
 from .data_pipeline.pipeline import filter_pipeline, build_executor, sent_dedup
 from .data_pipeline.cluster import create_client, submit_job
-from .data_pipeline.config import PipelineConfig, load_yml_config, ClusterConfig
+from .data_pipeline.config import (
+    PipelineConfig,
+    load_yml_config,
+    ClusterConfig,
+    ExecutorConfig,
+)
 from .data_pipeline.utils import print_pipeline
 
+nltk.download("punkt_tab")
 
 app = typer.Typer()
 
