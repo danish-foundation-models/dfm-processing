@@ -16,6 +16,8 @@ from datatrove.pipeline.dedup import (
 )
 from datatrove.pipeline.readers import JsonlReader, ParquetReader
 from datatrove.pipeline.writers import ParquetWriter
+from datatrove.pipeline.formatters import FTFYFormatter
+from datatrove.pipeline.tokens import TokensCounter
 from datatrove.utils.typeshelper import Languages
 
 from datatrove.executor.local import LocalPipelineExecutor
@@ -49,6 +51,7 @@ def filter_pipeline(dataset: Dataset) -> list[PipelineStep]:
         data_folder=dataset.input_dir, glob_pattern=dataset.glob_pattern
     )
     filter_steps = [
+        FTFYFormatter(),
         LanguageFilter(
             languages=[
                 Languages.danish,
@@ -77,6 +80,7 @@ def filter_pipeline(dataset: Dataset) -> list[PipelineStep]:
         FineWebQualityFilter(
             exclusion_writer=ParquetWriter(f"{dataset.exclusion_dir}/fineweb_quality")
         ),
+        TokensCounter(),
     ]
     writer = ParquetWriter(f"{dataset.output_dir}/filter_output")
 
