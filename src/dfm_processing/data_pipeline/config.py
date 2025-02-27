@@ -51,6 +51,9 @@ class ClusterConfig(BaseModel):
         None, help="Path to a scheduler file to connect to cluster"
     )
     n_workers: int = Field(5, help="")
+    worker_threads: int = Field(
+        3, help="Number of worker threads. I.e. number of parallel tasks per worker."
+    )
 
 
 class PipelineConfig(BaseModel):

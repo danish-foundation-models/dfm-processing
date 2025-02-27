@@ -21,6 +21,7 @@ from datatrove.pipeline.tokens import TokensCounter
 from datatrove.utils.typeshelper import Languages
 
 from datatrove.executor.local import LocalPipelineExecutor
+import nltk
 
 from dfm_processing.data_pipeline.config import ExecutorConfig, Dataset
 
@@ -36,6 +37,9 @@ def filter_pipeline(dataset: Dataset) -> list[PipelineStep]:
     Returns:
         A list of pipeline steps to use in a datatrove pipeline
     """
+    nltk.download("punkt_tab", quiet=True)
+    nltk.download("stopwords", quiet=True)
+    nltk.download("punkt", quiet=True)
     if any(
         [
             path == ""
@@ -72,7 +76,8 @@ def filter_pipeline(dataset: Dataset) -> list[PipelineStep]:
             ),
         ),
         GopherQualityFilter(
-            exclusion_writer=ParquetWriter(f"{dataset.exclusion_dir}/gopher_quality")
+            stop_words=nltk.corpus.stopwords.words("danish"),
+            exclusion_writer=ParquetWriter(f"{dataset.exclusion_dir}/gopher_quality"),
         ),
         C4QualityFilter(
             exclusion_writer=ParquetWriter(f"{dataset.exclusion_dir}/c4_quality")
