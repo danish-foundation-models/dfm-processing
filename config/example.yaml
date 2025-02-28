@@ -4,12 +4,14 @@
 datasets:
   -
     name: data1
+    glob_pattern: '*.jsonl.gz'
     input_dir: data1/
     output_dir: output/data1/
     exclusion_dir: exclusions/data1/
     logging_dir: logs/data1/
   -
     name: data2
+    glob_pattern: '*.jsonl.gz'
     input_dir: data2/
     output_dir: output/data2/
     exclusion_dir: exclusions/data2/
@@ -33,3 +35,4 @@ cluster:
   scheduler_port: 8786
   scheduler_file:
   n_workers: 5
+  worker_threads: 2
