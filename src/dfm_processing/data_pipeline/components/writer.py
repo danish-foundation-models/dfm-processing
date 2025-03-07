@@ -65,26 +65,34 @@ class NullableParquetWriter(DiskWriter):
         def make_nullable_type(typ):
             """
             Recursively rebuilds a PyArrow type so that for list and struct types
-            all inner elements/fields are marked as nullable.
+            all inner elements/fields are marked as nullable. For list types, if the
+            inner type is inferred as null, default it to pa.string(), which is often
+            the expected type.
             """
             if pa.types.is_list(typ):
-                # For list types, process the inner value field recursively.
                 inner_field = typ.value_field
-                new_inner_field = pa.field(
-                    inner_field.name,
-                    make_nullable_type(inner_field.type),
-                    nullable=True,
-                )
+                # If the inner type is null (which can happen if the list only contains nulls),
+                # assume it should be a string (adjust this if you expect another type).
+                if pa.types.is_null(inner_field.type):
+                    new_inner_field = pa.field(
+                        inner_field.name, pa.string(), nullable=True
+                    )
+                else:
+                    new_inner_field = pa.field(
+                        inner_field.name,
+                        make_nullable_type(inner_field.type),
+                        nullable=True,
+                    )
                 return pa.list_(new_inner_field)
             elif pa.types.is_struct(typ):
-                # For struct types, rebuild the struct with all child fields nullable.
+                # For struct types, rebuild each child field recursively.
                 new_fields = [
                     pa.field(field.name, make_nullable_type(field.type), nullable=True)
                     for field in typ
                 ]
                 return pa.struct(new_fields)
             else:
-                # For other types, no change is necessary.
+                # For other types, return as is.
                 return typ
 
         def make_nullable_schema(schema):
@@ -99,21 +107,26 @@ class NullableParquetWriter(DiskWriter):
                 ]
             )
 
-        # prepare batch
+        # Prepare the record batch from your documents.
         batch = pa.RecordBatch.from_pylist(self._batches.pop(filename))
 
         if filename not in self._writers:
-            # Infer the initial schema from the document.
+            # Infer the initial schema from the first batch.
             initial_schema = batch.schema
-            # Force all fields to be nullable.
-            nullable_schema = nullable_schema = make_nullable_schema(initial_schema)
+            # Build a schema that marks all fields (including nested ones) as nullable.
+            nullable_schema = make_nullable_schema(initial_schema)
             self._writers[filename] = pq.ParquetWriter(
                 self._file_handlers[filename],
                 schema=nullable_schema,
                 compression=self.compression,
             )
+        else:
+            # For subsequent batches, cast the batch to the writer's schema.
+            # This ensures that even if Arrow infers a different inner type (like null for an empty list),
+            # the batch is converted to match the existing file schema.
+            batch = batch.cast(self._writers[filename].schema)
 
-        # write batch
+        # Write the batch using the ParquetWriter.
         self._writers[filename].write_batch(batch)
 
     def _write(self, document: dict, file_handler: IO, filename: str):
