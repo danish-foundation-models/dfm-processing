@@ -1,6 +1,6 @@
 [project]
 name = "dfm-processing"
-version = "0.2.3"
+version = "0.2.4"
 description = "Library for data processing within the Danish Foundation Models project."
 readme = "README.md"
 authors = [

@@ -62,6 +62,43 @@ class NullableParquetWriter(DiskWriter):
         import pyarrow as pa
         import pyarrow.parquet as pq
 
+        def make_nullable_type(typ):
+            """
+            Recursively rebuilds a PyArrow type so that for list and struct types
+            all inner elements/fields are marked as nullable.
+            """
+            if pa.types.is_list(typ):
+                # For list types, process the inner value field recursively.
+                inner_field = typ.value_field
+                new_inner_field = pa.field(
+                    inner_field.name,
+                    make_nullable_type(inner_field.type),
+                    nullable=True,
+                )
+                return pa.list_(new_inner_field)
+            elif pa.types.is_struct(typ):
+                # For struct types, rebuild the struct with all child fields nullable.
+                new_fields = [
+                    pa.field(field.name, make_nullable_type(field.type), nullable=True)
+                    for field in typ
+                ]
+                return pa.struct(new_fields)
+            else:
+                # For other types, no change is necessary.
+                return typ
+
+        def make_nullable_schema(schema):
+            """
+            Takes an existing schema and returns a new one with all fields (and
+            their nested elements, if applicable) marked as nullable.
+            """
+            return pa.schema(
+                [
+                    pa.field(field.name, make_nullable_type(field.type), nullable=True)
+                    for field in schema
+                ]
+            )
+
         # prepare batch
         batch = pa.RecordBatch.from_pylist(self._batches.pop(filename))
 
@@ -69,12 +106,7 @@ class NullableParquetWriter(DiskWriter):
             # Infer the initial schema from the document.
             initial_schema = batch.schema
             # Force all fields to be nullable.
-            nullable_schema = pa.schema(
-                [
-                    pa.field(name, type, nullable=True)
-                    for name, type in zip(initial_schema.names, initial_schema.types)
-                ]
-            )
+            nullable_schema = nullable_schema = make_nullable_schema(initial_schema)
             self._writers[filename] = pq.ParquetWriter(
                 self._file_handlers[filename],
                 schema=nullable_schema,
