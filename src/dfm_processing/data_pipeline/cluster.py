@@ -9,6 +9,17 @@ from dfm_processing.data_pipeline.config import ClusterConfig
 
 
 def create_client(config: ClusterConfig) -> Client:
+    """Build a Dask Cluster Client based on desired configuration.
+
+    Args:
+        config: A configuration object defining the Dask cluster.
+
+    Raises:
+        ValueError: Something is wrong with the configuration.
+
+    Returns:
+        The Dask Client used to submit jobs.
+    """
     if config.type == "local" and config.n_workers:
         cluster = LocalCluster(
             name="LocalCluster DFM",

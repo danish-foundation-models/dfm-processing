@@ -8,14 +8,7 @@ from datatrove.pipeline.filters import (
     FineWebQualityFilter,
     GopherQualityFilter,
 )
-from datatrove.pipeline.dedup import (
-    SentenceFindDedups,
-    SentenceDedupSignature,
-    SentDedupConfig,
-    SentenceDedupFilter,
-)
-from datatrove.pipeline.readers import JsonlReader, ParquetReader
-from datatrove.pipeline.writers import ParquetWriter
+from datatrove.pipeline.readers import JsonlReader
 from datatrove.pipeline.formatters import FTFYFormatter
 from datatrove.pipeline.tokens import TokensCounter
 from datatrove.utils.typeshelper import Languages
@@ -97,61 +90,6 @@ def filter_pipeline(dataset: Dataset) -> list[PipelineStep]:
     writer = NullableParquetWriter(f"{dataset.output_dir}/filter_output")
 
     return [reader] + filter_steps + [writer]
-
-
-def sent_dedup(
-    dedup_dir: str,
-    filter_dir: str,
-    output_dir: str,
-    exclusion_dir: str,
-    n_workers: int = 5,
-) -> tuple[list[PipelineStep], list[PipelineStep], list[PipelineStep]]:
-    """Method for creating the three pipelines that are needed for doing sentence deduplication
-
-    Args:
-        dedup_dir: Path to directory to store deduplication artifacts
-        filter_dir: Path to directory containing input data
-        output_dir: Path to directory to store deduplicated data
-        exclusion_dir: Path to directory to store excluded data
-        n_workers: Number of finder workers. Defaults to 5.
-
-    Returns:
-        tuple[list[PipelineStep], list[PipelineStep], list[PipelineStep]]: The three pipeline for sentence deduplication.
-    """
-    config = SentDedupConfig(
-        n_sentences=3,
-        split_sentences=False,  # set to False to split on \n instead of sentences
-        only_dedup_in_index=True,
-        min_doc_words=50,  # minimum number of words to keep document after dedup
-        min_num_sentences=1,  # minimum number of sentences to keep document after dedup
-    )
-    dedup_sigs = [
-        SentenceDedupSignature(
-            output_folder=f"{dedup_dir}/sigs",
-            config=config,
-            finder_workers=n_workers,
-            language=Languages.danish,
-        ),
-    ]
-
-    find_dedups = [
-        SentenceFindDedups(
-            data_folder=f"{dedup_dir}/sigs",
-            output_folder=f"{dedup_dir}/dups",
-            config=config,
-        )
-    ]
-
-    filter_dedup = [
-        ParquetReader(data_folder=filter_dir),
-        SentenceDedupFilter(
-            data_folder=f"{dedup_dir}/dups",
-            exclusion_writer=ParquetWriter(f"{exclusion_dir}/sent_dedup/"),
-        ),
-        ParquetWriter(f"{output_dir}/sent_dedup_output"),
-    ]
-
-    return dedup_sigs, find_dedups, filter_dedup
 
 
 def tokenization_pipeline():

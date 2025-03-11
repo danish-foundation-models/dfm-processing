@@ -56,6 +56,28 @@ class ClusterConfig(BaseModel):
     )
 
 
+class SentenceDeduplication(BaseModel):
+    """Sentence Deduplication configuration."""
+
+    input_dir: str = Field("output/", help="")
+    gllob_pattern: str = Field("**/*.parquet", help="")
+    dedup_dir: str = Field("dedup/")
+    exclusion_dir: str = Field("exclusions/sent_deup")
+    output_dir: str = Field("sent_dedup/")
+    logging_dir: str = Field("logs/sent_dedup")
+
+
+class MinHashDeduplication(BaseModel):
+    """MinHash Deduplication configuration."""
+
+    input_dir: str = Field("sent_dedup/", help="")
+    gllob_pattern: str = Field("**/*.parquet", help="")
+    dedup_dir: str = Field("dedup/")
+    exclusion_dir: str = Field("exclusions/minhash_dedup")
+    output_dir: str = Field("minhash_dedup/")
+    logging_dir: str = Field("logs/sent_dedup")
+
+
 class PipelineConfig(BaseModel):
     """Config object to hold the various configuration options. Enables loading from yaml file."""
 
@@ -65,7 +87,11 @@ class PipelineConfig(BaseModel):
 
     executor: ExecutorConfig = Field(help="Settings for the executor of the pipeline")
 
-    sent_dedup: bool = Field(False, help="Whether or not to run sentence deduplication")
-    dedup_dir: str = Field(help="Directory to save dedup signatures, etc.")
+    sentence_deduplication: SentenceDeduplication = Field(
+        help="Settings for sentence deduplication."
+    )
+    minhash_deduplication: MinHashDeduplication = Field(
+        help="Settings for minhash deduplication."
+    )
 
     cluster: ClusterConfig = Field(help="Configurations for the dask cluster")
