@@ -15,6 +15,7 @@ from datatrove.pipeline.dedup import (
     MinhashDedupFilter,
 )
 from datatrove.utils.typeshelper import Languages
+from datatrove.utils.hashing import HashConfig
 
 from dfm_processing.data_pipeline.components.writer import (
     JSONParquetWriter,
@@ -29,6 +30,7 @@ def minhash_deduplication(
     dedup_dir: str,
     output_dir: str,
     exclusion_dir: str,
+    n_buckets: int = 14,
 ) -> tuple[
     list[PipelineStep], list[PipelineStep], list[PipelineStep], list[PipelineStep]
 ]:
@@ -36,9 +38,9 @@ def minhash_deduplication(
     # stage 1 computes minhash signatures for each task (each task gets a set of files)
     # you can also change ngrams or the number of buckets and their size here
     minhash_config = MinhashConfig(
-        use_64bit_hashes=True
+        num_buckets=n_buckets, hash_config=HashConfig(precision=64)
     )  # better precision -> fewer false positives (collisions)
-    stage1 = [
+    stage1: list[PipelineStep] = [
         input_reader,
         MinhashDedupSignature(
             output_folder=f"{dedup_dir}/signatures",
@@ -48,7 +50,7 @@ def minhash_deduplication(
     ]
 
     # stage 2 finds matches between signatures in each bucket
-    stage2 = [
+    stage2: list[PipelineStep] = [
         MinhashDedupBuckets(
             input_folder=f"{dedup_dir}/signatures",
             output_folder=f"{dedup_dir}/buckets",
@@ -57,7 +59,7 @@ def minhash_deduplication(
     ]
 
     # stage 3 creates clusters of duplicates using the results from all buckets
-    stage3 = [
+    stage3: list[PipelineStep] = [
         MinhashDedupCluster(
             input_folder=f"{dedup_dir}/buckets",
             output_folder=f"{dedup_dir}/remove_ids",
@@ -67,7 +69,7 @@ def minhash_deduplication(
 
     # stage 4 reads the original input data and removes all but 1 sample per duplicate cluster
     # the data must match exactly stage 1, so number of tasks and the input source must be the same
-    stage4 = [
+    stage4: list[PipelineStep] = [
         input_reader,
         MinhashDedupFilter(
             input_folder=f"{dedup_dir}/remove_ids",

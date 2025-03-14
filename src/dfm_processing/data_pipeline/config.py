@@ -60,7 +60,7 @@ class SentenceDeduplication(BaseModel):
     """Sentence Deduplication configuration."""
 
     input_dir: str = Field("output/", help="")
-    gllob_pattern: str = Field("**/*.parquet", help="")
+    glob_pattern: str = Field("**/*.parquet", help="")
     dedup_dir: str = Field("dedup/")
     exclusion_dir: str = Field("exclusions/sent_deup")
     output_dir: str = Field("sent_dedup/")
@@ -71,11 +71,13 @@ class MinHashDeduplication(BaseModel):
     """MinHash Deduplication configuration."""
 
     input_dir: str = Field("sent_dedup/", help="")
-    gllob_pattern: str = Field("**/*.parquet", help="")
+    glob_pattern: str = Field("**/*.parquet", help="")
     dedup_dir: str = Field("dedup/")
     exclusion_dir: str = Field("exclusions/minhash_dedup")
     output_dir: str = Field("minhash_dedup/")
-    logging_dir: str = Field("logs/sent_dedup")
+    logging_dir: str = Field("logs/minhash_dedup")
+
+    n_buckets: int = Field(14)
 
 
 class PipelineConfig(BaseModel):

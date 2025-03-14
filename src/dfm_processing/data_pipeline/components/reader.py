@@ -1,8 +1,10 @@
 from typing import Callable
+import json
 
 from datatrove.data import Document
 from datatrove.io import DataFileLike, DataFolderLike
 from datatrove.pipeline.readers.base import BaseDiskReader
+from datatrove.utils.logging import logger
 
 
 class JSONParquetReader(BaseDiskReader):
@@ -71,7 +73,6 @@ class JSONParquetReader(BaseDiskReader):
 
     def read_file(self, filepath: str):
         import pyarrow.parquet as pq
-        import json
 
         with self.data_folder.open(filepath, "rb") as f:
             with pq.ParquetFile(f) as pqf:
@@ -91,18 +92,31 @@ class JSONParquetReader(BaseDiskReader):
                             if not document:
                                 continue
                             # If metadata exists and is a JSON string, convert it back to a dict.
-                            if (
-                                self.read_metadata
-                                and "metadata" in document
-                                and isinstance(document["metadata"], str)
-                            ):
-                                try:
-                                    document["metadata"] = json.loads(
-                                        document["metadata"]
-                                    )
-                                except json.JSONDecodeError:
-                                    # If conversion fails, leave the metadata as the original string.
-                                    pass
+                            # if (
+                            #     self.read_metadata
+                            #     and "metadata" in document
+                            #     and isinstance(document["metadata"], str)
+                            # ):
+                            #     try:
+                            #         document["metadata"] = json.loads(
+                            #             document["metadata"]
+                            #         )
+                            #     except json.JSONDecodeError:
+                            #         # If conversion fails, leave the metadata as the original string.
+                            #         pass
                             documents.append(document)
                             li += 1
                     yield from documents
+
+    def get_document_from_dict(self, data: dict, source_file: str, id_in_file: int):
+        # If metadata is stored as a JSON string, convert it back to a dict.
+        if "metadata" in data and isinstance(data["metadata"], str):
+            try:
+                data["metadata"] = json.loads(data["metadata"])
+            except json.JSONDecodeError:
+                # If conversion fails, set it to an empty dict
+                logger.warning(
+                    f"Failed to convert the metadata from {source_file} - {id_in_file}"
+                )
+                data["metadata"] = {}
+        return super().get_document_from_dict(data, source_file, id_in_file)

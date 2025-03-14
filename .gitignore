@@ -23,3 +23,6 @@ data/*
 
 # Log files
 logs/*
+
+# Test files
+.coverage*

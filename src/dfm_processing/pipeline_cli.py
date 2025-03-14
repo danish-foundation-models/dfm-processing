@@ -9,8 +9,10 @@ from datatrove.utils.logging import logger
 from distributed import Client, Future
 import typer
 
+from dfm_processing.data_pipeline.config import MinHashDeduplication
+
 from .data_pipeline.pipeline import filter_pipeline, build_executor
-from .data_pipeline.deduplication import sentence_deduplication
+from .data_pipeline.deduplication import sentence_deduplication, minhash_deduplication
 from .data_pipeline.cluster import create_client, submit_job
 from .data_pipeline.config import (
     PipelineConfig,
@@ -106,7 +108,7 @@ def sent_dedup(config_file: Path):
     # Step 1
     executor: LocalPipelineExecutor = build_executor(
         dedup_sigs,
-        logging_dir=f"{dedup_config.logging_dir}/filter",
+        logging_dir=f"{dedup_config.logging_dir}/dedup_sigs",
         config=executor_config,
     )
 
@@ -158,4 +160,72 @@ def minhash_dedup(config_file: Path):
     Args:
         config_file: Path to a config file.
     """
-    pass
+    config = PipelineConfig(**load_yml_config(config_file))
+    executor_config: ExecutorConfig = config.executor
+    dedup_config: MinHashDeduplication = config.minhash_deduplication
+
+    if not isinstance(config.datasets, list):
+        typer.Exit(code=1)
+
+    if executor_config.n_tasks % dedup_config.n_buckets != 0:
+        logger.error("Number of tasks should be divisible by the number of buckets.")
+        typer.Exit(code=1)
+
+    dedup_sigs, dedup_buckets, dedup_cluster, dedup_filter = minhash_deduplication(
+        dedup_dir=dedup_config.dedup_dir,
+        data_dir=dedup_config.input_dir,
+        output_dir=dedup_config.output_dir,
+        exclusion_dir=dedup_config.exclusion_dir,
+        n_buckets=dedup_config.n_buckets,
+    )
+
+    # Step 1
+    executor: LocalPipelineExecutor = build_executor(
+        dedup_sigs,
+        logging_dir=f"{dedup_config.logging_dir}/dedup_sigs",
+        config=executor_config,
+    )
+
+    # Step 2
+    executor = build_executor(
+        dedup_buckets,
+        logging_dir=f"{dedup_config.logging_dir}/dedup_buckets",
+        config=executor_config,
+        depends=executor,
+    )
+    executor.tasks = (
+        1  # dedup_config.n_buckets  # NOTE: Not a pretty way of doing this.
+    )
+
+    # Step 3
+    executor = build_executor(
+        dedup_cluster,
+        logging_dir=f"{dedup_config.logging_dir}/dedup_cluster",
+        config=executor_config,
+        depends=executor,
+    )
+    executor.tasks = 1
+
+    # Step 4
+    executor = build_executor(
+        dedup_filter,
+        logging_dir=f"{dedup_config.logging_dir}/dedup_filter",
+        config=executor_config,
+        depends=executor,
+    )
+
+    if executor_config.debug:
+        print_pipeline(executor)
+
+    cluster_config: ClusterConfig = config.cluster
+    client: Client = create_client(cluster_config)
+    future = submit_job(client, executor.run)
+
+    stats: list[PipelineStats] = client.gather([future])
+    # merged stats
+    stats = list(filter(lambda x: x, stats))
+    if len(stats) > 0:
+        stat: PipelineStats = sum(stats, start=PipelineStats())
+        logger.success(stat.get_repr("All tasks"))
+    else:
+        logger.success("Nothing to do.")
