@@ -7,6 +7,8 @@ from dfm_processing.data_pipeline.config import (
     ExecutorConfig,
     ClusterConfig,
     PipelineConfig,
+    MinHashDeduplication,
+    SentenceDeduplication,
     load_yml_config,
 )
 
@@ -23,11 +25,30 @@ VALID_EXECUTOR = {"n_workers": 2, "n_tasks": 3}
 
 VALID_CLUSTER = {"type": "distributed"}
 
+VALID_SENT_DEDUP = {
+    "input_dir": "output",
+    "glob_pattern": "*.parquet",
+    "dedup_dir": "dedup",
+    "exclusion_dir": "exclusions",
+    "output_dir": "sent_dedup",
+    "logging_dir": "sent_logs",
+}
+
+VALID_MINH_DEDUP = {
+    "input_dir": "sent_dedup",
+    "glob_pattern": "*.parquet",
+    "dedup_dir": "dedup",
+    "exclusion_dir": "exclusions",
+    "output_dir": "minh_dedup",
+    "logging_dir": "minh_logs",
+    "n_buckets": 14,
+}
+
 VALID_PIPELINE = {
     "datasets": [VALID_DATASET],
     "executor": VALID_EXECUTOR,
-    "sent_dedup": True,
-    "dedup_dir": "dedup",
+    "sentence_deduplication": VALID_SENT_DEDUP,
+    "minhash_deduplication": VALID_MINH_DEDUP,
     "cluster": VALID_CLUSTER,
 }
 
@@ -103,11 +124,18 @@ def test_pipeline_valid():
     pipeline = PipelineConfig(**VALID_PIPELINE)
     assert len(pipeline.datasets) == 1
     assert pipeline.executor.n_workers == 2
-    assert pipeline.sent_dedup is True
+    assert isinstance(pipeline.minhash_deduplication, MinHashDeduplication)
+    assert isinstance(pipeline.sentence_deduplication, SentenceDeduplication)
 
 
 def test_pipeline_missing_required_fields():
-    required_fields = ["datasets", "executor", "dedup_dir", "cluster"]
+    required_fields = [
+        "datasets",
+        "executor",
+        "sentence_deduplication",
+        "minhash_deduplication",
+        "cluster",
+    ]
     for field in required_fields:
         data = VALID_PIPELINE.copy()
         del data[field]
@@ -149,19 +177,3 @@ def test_invalid_yaml_syntax(tmp_path):
     config_file.write_text("invalid: yaml: here")
     with pytest.raises(yaml.YAMLError):
         load_yml_config(config_file)
-
-
-# Test dedup_dir is required
-def test_pipeline_missing_dedup_dir():
-    data = VALID_PIPELINE.copy()
-    del data["dedup_dir"]
-    with pytest.raises(ValidationError):
-        PipelineConfig(**data)
-
-
-# Test sent_dedup default
-def test_sent_dedup_default():
-    data = VALID_PIPELINE.copy()
-    del data["sent_dedup"]
-    pipeline = PipelineConfig(**data)
-    assert pipeline.sent_dedup is False

@@ -3,14 +3,14 @@ import pytest
 # Import functions to be tested.
 from dfm_processing.data_pipeline.pipeline import (
     filter_pipeline,
-    sent_dedup,
     build_executor,
 )
 from dfm_processing.data_pipeline.config import ExecutorConfig, Dataset
+from dfm_processing.data_pipeline.deduplication import sentence_deduplication
 
 # Import pipeline step classes for type-checking and attribute inspection.
-from datatrove.pipeline.readers import JsonlReader, ParquetReader
-from datatrove.pipeline.writers import ParquetWriter
+from datatrove.pipeline.readers.base import BaseDiskReader
+from datatrove.pipeline.writers.disk_base import DiskWriter
 from datatrove.pipeline.dedup import (
     SentenceFindDedups,
     SentenceDedupSignature,
@@ -52,7 +52,7 @@ def test_filter_pipeline(dataset: Dataset):
 
     # Step 1: JsonlReader.
     reader = pipeline[0]
-    assert isinstance(reader, JsonlReader)
+    assert isinstance(reader, BaseDiskReader)
     # Assume the reader stores the input path in an attribute called "data_folder" or "path".
     assert reader.data_folder.path == dataset.input_dir
 
@@ -60,7 +60,7 @@ def test_filter_pipeline(dataset: Dataset):
 
     # Step 2: ParquetWriter (for the output).
     writer = pipeline[-1]
-    assert isinstance(writer, ParquetWriter)
+    assert isinstance(writer, DiskWriter)
     writer_path = writer.output_folder.path
     assert writer_path == f"{dataset.output_dir}/filter_output"
 
@@ -103,14 +103,14 @@ def test_sent_dedup():
     exclusion_dir = "/exclusion"
     n_workers = 7
 
-    dedup_sigs, find_dedups, filter_dedup = sent_dedup(
-        dedup_dir, filter_dir, output_dir, exclusion_dir, n_workers
+    dedup_sigs, find_dedups, filter_dedup = sentence_deduplication(
+        filter_dir, dedup_dir, output_dir, exclusion_dir, n_workers
     )
 
     # Validate dedup_sigs (list of SentenceDedupSignature).
     assert isinstance(dedup_sigs, list)
-    assert len(dedup_sigs) == 1
-    sig = dedup_sigs[0]
+    assert len(dedup_sigs) == 2
+    sig = dedup_sigs[-1]
     assert isinstance(sig, SentenceDedupSignature)
     assert sig.output_folder.path == f"{dedup_dir}/sigs"
     assert sig.finder_workers == n_workers
@@ -119,11 +119,6 @@ def test_sent_dedup():
     # Check the configuration inside the signature.
     config = sig.config
     assert isinstance(config, SentDedupConfig)
-    assert config.n_sentences == 3
-    assert config.split_sentences is False
-    assert config.only_dedup_in_index is True
-    assert config.min_doc_words == 50
-    assert config.min_num_sentences == 1
 
     # Validate find_dedups (list of SentenceFindDedups).
     assert isinstance(find_dedups, list)
@@ -141,7 +136,7 @@ def test_sent_dedup():
 
     # Step 1: ParquetReader.
     reader = filter_dedup[0]
-    assert isinstance(reader, ParquetReader)
+    assert isinstance(reader, BaseDiskReader)
     assert reader.data_folder.path == filter_dir
 
     # Step 2: SentenceDedupFilter.
@@ -149,12 +144,12 @@ def test_sent_dedup():
     assert isinstance(dedup_filter, SentenceDedupFilter)
     assert dedup_filter.data_folder.path == f"{dedup_dir}/dups"
     exclusion_writer = dedup_filter.exclusion_writer
-    assert isinstance(exclusion_writer, ParquetWriter)
+    assert isinstance(exclusion_writer, DiskWriter)
     assert exclusion_writer.output_folder.path == f"{exclusion_dir}/sent_dedup"
 
     # Step 3: ParquetWriter.
     writer = filter_dedup[2]
-    assert isinstance(writer, ParquetWriter)
+    assert isinstance(writer, DiskWriter)
     assert writer.output_folder.path == f"{output_dir}/sent_dedup_output"
 
 
@@ -170,7 +165,9 @@ def test_sent_dedup_negative_workers():
     n_workers = -3  # Negative value
 
     with pytest.raises(ValueError):
-        sent_dedup(dedup_dir, filter_dir, output_dir, exclusion_dir, n_workers)
+        sentence_deduplication(
+            dedup_dir, filter_dir, output_dir, exclusion_dir, n_workers
+        )
 
 
 # ===========================

@@ -31,45 +31,71 @@ def cluster_config():
 
 
 @pytest.mark.parametrize(
-    "config_kwargs, expected_kwargs",
+    "config_kwargs, expected",
     [
-        # Test case 1: Local cluster (explicit scheduler_file=None, n_workers=3)
+        # Test case 1: Local cluster: expect a LocalCluster with the specified number of workers.
         (
-            {"n_workers": 3, "scheduler_file": None},
-            {"n_workers": 3, "scheduler_file": None},
+            {"n_workers": 3, "scheduler_file": None, "type": "local"},
+            {"branch": "local", "n_workers": 3},
         ),
-        # Test case 2: Connecting to an existing cluster (non-None scheduler_file)
+        # Test case 2: Distributed with scheduler_file: expect Client(scheduler_file=...)
         (
-            {"n_workers": 3, "scheduler_file": "/path/to/scheduler.json"},
-            {"n_workers": 3, "scheduler_file": "/path/to/scheduler.json"},
+            {
+                "n_workers": 3,
+                "scheduler_file": "/path/to/scheduler.json",
+                "type": "distributed",
+            },
+            {"branch": "distributed", "scheduler_file": "/path/to/scheduler.json"},
         ),
-        # Test case 3: Using default configuration (i.e. no parameters passed; ClusterConfig() uses defaults)
-        # Note: Assuming the default for n_workers is 5 and scheduler_file is None.
-        ({}, {"n_workers": 5, "scheduler_file": None}),
+        # Test case 3: Distributed without scheduler_file: expect Client(address=...)
+        (
+            {},  # using ClusterConfig() defaults; assume default type is "distributed",
+            {"branch": "local", "address": "localhost:8786", "n_workers": 5},
+        ),
     ],
 )
-def test_create_client_parametrized(mock_client, config_kwargs, expected_kwargs):
+def test_create_client_parametrized(mock_client, config_kwargs, expected):
     """
     Test create_client using parameterized configuration.
 
-    The test creates a ClusterConfig either by explicitly providing parameters
-    or by using the default constructor. It then verifies that create_client passes
-    the expected keyword arguments to the Client.
+    For a local configuration, it verifies that Client was created with a LocalCluster
+    with the expected number of workers. For a distributed configuration, it checks that
+    the correct keyword argument (scheduler_file or address) was passed to Client.
     """
-    # If config_kwargs is provided, include standard values along with overrides.
     if config_kwargs:
+        # Provide some standard parameters along with overrides.
         config = ClusterConfig(
-            type="distributed",
             scheduler_host="localhost",
             scheduler_port=8786,
             **config_kwargs,
         )
     else:
-        # When no overrides are provided, rely on the defaults in ClusterConfig.
+        # When no parameters are passed, rely on the defaults defined in ClusterConfig.
         config = ClusterConfig()
 
     client = create_client(config)
-    mock_client.assert_called_once_with(**expected_kwargs)
+
+    if expected["branch"] == "local":
+        # For a local cluster, create_client passes a LocalCluster instance as the first argument.
+        cluster_arg = mock_client.call_args[0][0]
+        from dask.distributed import LocalCluster
+
+        assert isinstance(cluster_arg, LocalCluster)
+        assert len(cluster_arg.workers) == expected["n_workers"]
+    elif expected["branch"] == "distributed":
+        # For distributed clusters, we expect either a scheduler_file or an address.
+        if "scheduler_file" in expected:
+            mock_client.assert_called_once_with(
+                scheduler_file=expected["scheduler_file"]
+            )
+        elif "address" in expected:
+            mock_client.assert_called_once_with(address=expected["address"])
+    else:
+        pytest.fail("Unexpected configuration branch.")
+
+    # Also assert that the returned client is indeed an instance of Client.
+    from dask.distributed import Client
+
     assert isinstance(client, Client)
 
 

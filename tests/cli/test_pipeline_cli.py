@@ -12,25 +12,43 @@ from dfm_processing.pipeline_cli import app
 runner = CliRunner()
 
 # Dummy configuration for a valid run.
-dummy_config_valid = {
-    "executor": {"n_tasks": 10, "n_workers": 5, "debug": True},
-    "datasets": [
-        {
-            "name": "dataset1",
-            "input_dir": "/dummy/input",
-            "output_dir": "/dummy/output",
-            "exclusion_dir": "/dummy/exclusion",
-            "logging_dir": "/dummy/logs",
-        }
-    ],
-    "sent_dedup": True,
-    "dedup_dir": "/dummy/dedup",
-    "cluster": {
-        "type": "distributed",
-        "scheduler_host": "localhost",
-        "scheduler_port": 8786,
-        "n_workers": 3,
-    },
+VALID_DATASET = {
+    "name": "test",
+    "input_dir": "input",
+    "output_dir": "output",
+    "exclusion_dir": "exclude",
+    "logging_dir": "logs",
+}
+
+VALID_EXECUTOR = {"n_workers": 2, "n_tasks": 3}
+
+VALID_CLUSTER = {"type": "distributed"}
+
+VALID_SENT_DEDUP = {
+    "input_dir": "output",
+    "glob_pattern": "*.parquet",
+    "dedup_dir": "dedup",
+    "exclusion_dir": "exclusions",
+    "output_dir": "sent_dedup",
+    "logging_dir": "sent_logs",
+}
+
+VALID_MINH_DEDUP = {
+    "input_dir": "sent_dedup",
+    "glob_pattern": "*.parquet",
+    "dedup_dir": "dedup",
+    "exclusion_dir": "exclusions",
+    "output_dir": "minh_dedup",
+    "logging_dir": "minh_logs",
+    "n_buckets": 14,
+}
+
+VALID_PIPELINE = {
+    "datasets": [VALID_DATASET],
+    "executor": VALID_EXECUTOR,
+    "sentence_deduplication": VALID_SENT_DEDUP,
+    "minhash_deduplication": VALID_MINH_DEDUP,
+    "cluster": VALID_CLUSTER,
 }
 
 # Dummy configuration with an invalid datasets field (not a list).
@@ -80,7 +98,7 @@ def dummy_future():
     return MagicMock()
 
 
-def test_cli_run_valid(monkeypatch, tmp_path, dummy_client, dummy_future):
+def test_cli_filter_valid(monkeypatch, tmp_path, dummy_client, dummy_future):
     """
     Test the CLI command with a valid configuration.
     We monkeypatch:
@@ -98,7 +116,7 @@ def test_cli_run_valid(monkeypatch, tmp_path, dummy_client, dummy_future):
     import dfm_processing.pipeline_cli as cli_mod
 
     # Patch load_yml_config so it returns our dummy configuration.
-    monkeypatch.setattr(cli_mod, "load_yml_config", lambda path: dummy_config_valid)
+    monkeypatch.setattr(cli_mod, "load_yml_config", lambda path: VALID_PIPELINE)
 
     # Patch create_client to return our dummy client.
     monkeypatch.setattr(cli_mod, "create_client", lambda cfg: dummy_client)
@@ -120,12 +138,12 @@ def test_cli_run_valid(monkeypatch, tmp_path, dummy_client, dummy_future):
     monkeypatch.setattr(cli_mod, "logger", DummyLogger)
 
     # Invoke the CLI command with catch_exceptions=False.
-    result = runner.invoke(app, [str(config_file)], catch_exceptions=False)
+    result = runner.invoke(app, ["filter", str(config_file)], catch_exceptions=False)
 
     # If exit_code is not 0, print details to help with debugging.
     if result.exit_code != 0:
         print("STDOUT:\n", result.stdout)
-        print("STDERR:\n", result.stderr)
+        # print("STDERR:\n", result.stderr)
         print("Exception:\n", result.exception)
 
     # Assert the command exited successfully.
@@ -136,7 +154,7 @@ def test_cli_run_valid(monkeypatch, tmp_path, dummy_client, dummy_future):
     ), "Expected success message not found."
 
 
-def test_cli_run_invalid_datasets(monkeypatch, tmp_path):
+def test_cli_filter_invalid_datasets(monkeypatch, tmp_path):
     """
     Test the CLI command with an invalid configuration where datasets is not a list.
     The CLI should exit with a non-zero code.
@@ -152,7 +170,7 @@ def test_cli_run_invalid_datasets(monkeypatch, tmp_path):
     )
 
     # Invoke the CLI command.
-    result = runner.invoke(app, ["run", str(config_file)])
+    result = runner.invoke(app, ["filter", str(config_file)])
     # The CLI is expected to call typer.Exit (with a non-zero exit code) because datasets is invalid.
     assert (
         result.exit_code != 0
