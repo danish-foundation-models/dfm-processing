@@ -137,7 +137,7 @@ def test_submit_job_with_keyword_arguments(mock_client):
 
     # Note: The current implementation doesn't support kwargs, so they should fail
     with pytest.raises(TypeError):
-        submit_job(mock_client, test_job, 1, b=2)
+        submit_job(mock_client, test_job, 1, b=2)  # type: ignore
 
 
 def test_submit_job_error_handling(mock_client):
@@ -153,7 +153,7 @@ def test_submit_non_callable(mock_client):
     mock_client.submit.side_effect = TypeError("First argument must be callable")
 
     with pytest.raises(TypeError):
-        submit_job(mock_client, "not_a_function")
+        submit_job(mock_client, "not_a_function")  # type: ignore
 
 
 def test_client_closed_before_submit(mock_client):
