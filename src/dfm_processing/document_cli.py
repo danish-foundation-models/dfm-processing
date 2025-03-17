@@ -78,7 +78,6 @@ def process_web_crawl(
     """
     # Define the command as a list of strings
     command = ["grep", "^--", path_to_crawl_log]
-    failed = False
     # Run the command and capture the output
     try:
         result = subprocess.run(command, text=True, capture_output=True, check=True)  # type: ignore
@@ -92,9 +91,6 @@ def process_web_crawl(
         main_folders = set(filter(lambda x: x != "", main_folders))
     except subprocess.CalledProcessError as e:
         logging.error(f"Command failed with error: {e}")
-        failed = True
-
-    if failed:
         raise typer.Exit(code=1)
 
     files: list[Path] = []
