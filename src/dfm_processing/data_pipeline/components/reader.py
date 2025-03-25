@@ -91,19 +91,7 @@ class JSONParquetReader(BaseDiskReader):
                             )
                             if not document:
                                 continue
-                            # If metadata exists and is a JSON string, convert it back to a dict.
-                            # if (
-                            #     self.read_metadata
-                            #     and "metadata" in document
-                            #     and isinstance(document["metadata"], str)
-                            # ):
-                            #     try:
-                            #         document["metadata"] = json.loads(
-                            #             document["metadata"]
-                            #         )
-                            #     except json.JSONDecodeError:
-                            #         # If conversion fails, leave the metadata as the original string.
-                            #         pass
+
                             documents.append(document)
                             li += 1
                     yield from documents
