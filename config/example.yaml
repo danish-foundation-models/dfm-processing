@@ -18,21 +18,34 @@ datasets:
     logging_dir: logs/data2/
 
 # Deduplication
-sent_dedup: True
-dedup_dir: dedup/
+sentence_deduplication:
+  input_dir: output/
+  glob_pattern: '**/*.parquet'
+  dedup_dir: dedup/sent/
+  exclusion_dir: exclusions/sent_deup
+  output_dir: output/sent_dedup/
+  logging_dir: logs/sent_dedup/
+
+minhash_deduplication:
+  input_dir: output/sent_dedup/
+  glob_pattern: '**/*.parquet'
+  dedup_dir: dedup/minhash/
+  exclusion_dir: exclusions/minhash_deup
+  output_dir: output/minhash_dedup/
+  logging_dir: logs/minhash_dedup/
+  n_buckets: 10   # <---- This should match with `executor.n_tasks`
 
 
 # Executor
 executor:
   n_workers: 5
-  n_tasks: 10
-  debug: True
+  n_tasks: 10   # <---- This should match with `minhash_deduplication.n_buckets`
+  debug: False
 
 
 cluster:
   type: local # distributed
   scheduler_host: localhost
   scheduler_port: 8786
-  scheduler_file:
+  # scheduler_file:
   n_workers: 5
-  worker_threads: 2
