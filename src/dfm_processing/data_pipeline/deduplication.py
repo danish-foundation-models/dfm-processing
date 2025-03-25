@@ -34,6 +34,18 @@ def minhash_deduplication(
 ) -> tuple[
     list[PipelineStep], list[PipelineStep], list[PipelineStep], list[PipelineStep]
 ]:
+    """Create MinHash Deduplication pipeline(s).
+
+    Args:
+        data_dir: Path to processed data
+        dedup_dir: Path to store intermediate data
+        output_dir: Path to store deduplicated data
+        exclusion_dir: Path to store data that have been removed
+        n_buckets: Number of buckets. Defaults to 14.
+
+    Returns:
+        Four pipelines to run in sequence so as to deduplicate the data.
+    """
     input_reader = JSONParquetReader(data_dir, glob_pattern="**/*.parquet")
     # stage 1 computes minhash signatures for each task (each task gets a set of files)
     # you can also change ngrams or the number of buckets and their size here
@@ -98,7 +110,7 @@ def sentence_deduplication(
         n_workers: Number of finder workers. Defaults to 5.
 
     Returns:
-        tuple[list[PipelineStep], list[PipelineStep], list[PipelineStep]]: The three pipeline for sentence deduplication.
+        The three pipeline for sentence deduplication.
     """
     config = SentDedupConfig(
         n_sentences=3,
