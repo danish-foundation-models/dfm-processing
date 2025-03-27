@@ -67,7 +67,7 @@ def test_process_json_missing_key(tmp_path: Path, caplog: pytest.LogCaptureFixtu
 
 def test_process_msg_basic(tmp_path: Path, mocker: MockerFixture):
     mock_msg = MagicMock()
-    mock_msg.body = "Hello\n   World\n[test]\nhttp://link"
+    mock_msg.body = "Hello\n\n\nWorld\n[test]\nhttp://link"
     # Fix: Mock the openMsg imported in YOUR module, not extract_msg's openMsg
     mocker.patch(
         "dfm_processing.document_processing.processors.openMsg",  # Path to YOUR openMsg reference
@@ -117,7 +117,7 @@ def test_process_epub_file(tmp_path: Path, mocker: MockerFixture):
 ### Tests for process_txt ###
 def test_process_txt_newlines(tmp_path: Path):
     file_path = tmp_path / "test.txt"
-    file_path.write_text("Line1\n   \nLine2")
+    file_path.write_text("Line1\n\n\nLine2")
 
     result = process_txt(file_path, "test_source")
     jsonl = json.loads(result)  # type: ignore

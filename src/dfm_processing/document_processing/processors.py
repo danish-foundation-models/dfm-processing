@@ -162,7 +162,7 @@ def process_msg(
         return url
 
     text = openMsg(file_path).body
-    text = re.sub(r"[\n\s]+", "\n", text)
+    text = re.sub(r"(\n)+", "\n", text)
     text = re.sub(r"\[.+?\]", "", text)
     text = text.replace("\r", "")
     text = re.sub(r"https?:\/\/[^>]+", replace_url, text)
@@ -197,7 +197,7 @@ def process_html(
     text = extract_html_text(file_content)
     if not text:
         return None
-    text = re.sub(r"(\n\s)+", "\n", text)
+    text = re.sub(r"(\n)+", "\n", text)
     metadata = build_metadata(file_path)
     return json.dumps(asdict(create_JSONL(text, source, metadata)), ensure_ascii=False)
 
@@ -225,7 +225,7 @@ def process_epub(
         except UnicodeDecodeError:
             logger.error(f"Unable to read {file_path}")
             return None
-    text = re.sub(r"(\n\s)+", "\n", text)
+    text = re.sub(r"(\n)+", "\n", text)
     metadata = build_metadata(file_path)
     return json.dumps(asdict(create_JSONL(text, source, metadata)), ensure_ascii=False)
 
@@ -250,7 +250,7 @@ def process_txt(
         if isinstance(file_path, Path)
         else file_path.read().decode()
     )
-    text = re.sub(r"[\n\s]+", "\n", text)
+    text = re.sub(r"(\n)+", "\n", text)
     metadata = build_metadata(file_path)
     return json.dumps(asdict(create_JSONL(text, source, metadata)), ensure_ascii=False)
 
@@ -272,7 +272,7 @@ def process_word_old(
     """
     file_bytes: bytes = process_doc(file_path)
     text: str = file_bytes.decode("utf-8")
-    text = re.sub(r"(\n\s)+", "\n", text)
+    text = re.sub(r"(\n)+", "\n", text)
     metadata = build_metadata(file_path)
     return json.dumps(asdict(create_JSONL(text, source, metadata)), ensure_ascii=False)
 
@@ -364,7 +364,7 @@ def process_file(
         ".epub": process_epub,
         ".txt": process_txt,
         ".pptx": process_document,
-        ".md": process_document,
+        ".md": process_txt,
         ".msg": process_msg,
         ".json": process_json,
         ".doc": process_word_old,
