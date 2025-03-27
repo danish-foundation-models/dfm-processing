@@ -162,7 +162,7 @@ def process_msg(
         return url
 
     text = openMsg(file_path).body
-    text = re.sub(r"[\n\s]+", "\n", text)
+    text = re.sub(r"(\n\s)+", "\n", text)
     text = re.sub(r"\[.+?\]", "", text)
     text = text.replace("\r", "")
     text = re.sub(r"https?:\/\/[^>]+", replace_url, text)
@@ -225,7 +225,7 @@ def process_epub(
         except UnicodeDecodeError:
             logger.error(f"Unable to read {file_path}")
             return None
-    text = re.sub(r"[\n\s]+", "\n", text)
+    text = re.sub(r"(\n\s)+", "\n", text)
     metadata = build_metadata(file_path)
     return json.dumps(asdict(create_JSONL(text, source, metadata)), ensure_ascii=False)
 
@@ -250,7 +250,7 @@ def process_txt(
         if isinstance(file_path, Path)
         else file_path.read().decode()
     )
-    text = re.sub(r"[\n\s]+", "\n", text)
+    text = re.sub(r"(\n\s)+", "\n", text)
     metadata = build_metadata(file_path)
     return json.dumps(asdict(create_JSONL(text, source, metadata)), ensure_ascii=False)
 
