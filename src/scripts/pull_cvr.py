@@ -77,9 +77,9 @@ def pull_list(path: Path):
     url = "http://distribution.virk.dk/offentliggoerelser/_search"
     all_results: list = []
 
-    start_date = datetime(2015, 1, 2)
+    start_date = datetime(2000, 1, 2)
     end_date = datetime.today()
-    previous_date = datetime(2015, 1, 1)
+    previous_date = datetime(2000, 1, 1)
 
     for idx, day in enumerate(daterange(start_date, end_date)):
         QUERY["query"]["bool"]["must"][2]["range"]["offentliggoerelsesTidspunkt"][  # type: ignore
