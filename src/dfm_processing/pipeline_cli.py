@@ -193,9 +193,6 @@ def minhash_dedup(config_file: Path):
         config=executor_config,
         depends=executor,
     )
-    executor.tasks = (
-        1  # dedup_config.n_buckets  # NOTE: Not a pretty way of doing this.
-    )
 
     # Step 3
     executor = build_executor(
