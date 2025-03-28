@@ -17,7 +17,7 @@ from datatrove.executor.local import LocalPipelineExecutor
 import nltk
 
 from dfm_processing.data_pipeline.config import ExecutorConfig, Dataset
-from dfm_processing.data_pipeline.components.writer import NullableParquetWriter
+from dfm_processing.data_pipeline.components.writer import JSONParquetWriter
 
 
 def filter_pipeline(dataset: Dataset) -> list[PipelineStep]:
@@ -58,36 +58,37 @@ def filter_pipeline(dataset: Dataset) -> list[PipelineStep]:
                 # Languages.norwegian_nynorsk,
                 # Languages.english,
             ],
-            exclusion_writer=NullableParquetWriter(
+            exclusion_writer=JSONParquetWriter(
                 f"{dataset.exclusion_dir}/non_danish_documents"
             ),
             label_only=False,
         ),
         GopherRepetitionFilter(
             language=Languages.danish,
-            exclusion_writer=NullableParquetWriter(
+            exclusion_writer=JSONParquetWriter(
                 f"{dataset.exclusion_dir}/gopher_repetition"
             ),
         ),
         GopherQualityFilter(
             stop_words=nltk.corpus.stopwords.words("danish"),
-            exclusion_writer=NullableParquetWriter(
+            language=Languages.danish,
+            exclusion_writer=JSONParquetWriter(
                 f"{dataset.exclusion_dir}/gopher_quality"
             ),
         ),
         C4QualityFilter(
-            exclusion_writer=NullableParquetWriter(
-                f"{dataset.exclusion_dir}/c4_quality"
-            )
+            language=Languages.danish,
+            exclusion_writer=JSONParquetWriter(f"{dataset.exclusion_dir}/c4_quality"),
         ),
         FineWebQualityFilter(
-            exclusion_writer=NullableParquetWriter(
+            language=Languages.danish,
+            exclusion_writer=JSONParquetWriter(
                 f"{dataset.exclusion_dir}/fineweb_quality"
-            )
+            ),
         ),
         TokensCounter(),
     ]
-    writer = NullableParquetWriter(f"{dataset.output_dir}/filter_output")
+    writer = JSONParquetWriter(f"{dataset.output_dir}/filter_output")
 
     return [reader] + filter_steps + [writer]
 
