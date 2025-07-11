@@ -3,7 +3,7 @@
 <!-- HEADER STYLE: CLASSIC -->
 <div align="center">
 
-<img src="static/DFM-logo.png" width="100%" style="position: relative; top: 0; right: 0;" alt="Project Logo"/>
+<img src="static/DFM-logo.png" width="50%" style="position: relative; top: 0; right: 0;" alt="Project Logo"/>
 
 <br>
 
